@@ -1,0 +1,297 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{parskip}
+
+\geometry{margin=1in}
+
+\title{Numeric 2: Lecture Notes}
+\date{}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+\section*{General Information}
+
+\textbf{Lectures:}
+\begin{itemize}
+    \item Tuesday: 14:15 -- 15:45
+    \item Thursday: 10:15 -- 11:45 (08:30 -- 10:00)
+\end{itemize}
+
+\textbf{Exam:}
+\begin{itemize}
+    \item Oral exam
+    \item Exercises: Sheet allowed every week
+    \item Grading: 50\% theoretical and 50\% on programming
+\end{itemize}
+
+\section*{Contents}
+\begin{enumerate}
+    \item Eigenvalue problems
+    \begin{itemize}
+        \item Symmetric EV
+        \item General normal forms
+        \item Nonsymmetric EV
+    \end{itemize}
+    \item Iterative solvers for linear systems
+    \begin{itemize}
+        \item Krylow-type methods
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+\section{Motivation: (Simplified) version of Pagerank}
+
+\subsection*{Example: very small ``internet''}
+
+\begin{itemize}
+    \item $A, B, C, D$ are webpages.
+    \item We assign a number to each page.
+    \item $N$: Number of Pages.
+    \item $L(p) = \#$ outgoing links.
+\end{itemize}
+
+In our example: $L(A) = 3$, $L(B) = 1$.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{small_internet_graph.png}
+    \caption{small internet graph}
+    \label{fig:placeholder}
+\end{figure}
+
+Let us denote by $N$ the number of pages (Ex $N=4$). We define a matrix $A \in \mathbb{R}^{N \times N}$:
+
+\[
+a_{ij} = 
+\begin{cases} 
+\frac{1}{L(j)} & \text{if there is a link from } j \text{ to } i \\
+0 & \text{otherwise}
+\end{cases}
+\]
+
+Example indices:
+$A=1, B=2, C=3, D=4$.
+
+In our example:
+\[
+A = (a_{ij}) = 
+\begin{pmatrix}
+0 & 0 & \frac{1}{2} & \frac{1}{2} \\
+\frac{1}{3} & 0 & 0 & 0 \\
+\frac{1}{3} & 0 & 0 & 0 \\
+\frac{1}{3} & 1 & \frac{1}{2} & 0
+\end{pmatrix} \in \mathbb{R}^{4 \times 4}
+\]
+
+This matrix is \textbf{column-stochastic} (entries $\ge 0$ and column-sum $= 1$).
+
+This is always the case given that each page has at least one outgoing link.
+(Note: there is a gap here).
+
+We interpret the $a_{ij}$'s as probability to jump from $j$ to $i$.
+
+If we (randomly initialize) a vector $v = \begin{pmatrix} v_1 \\ \vdots \\ v_N \end{pmatrix}$ with $v_j \ge 0$.
+What does $A v = \begin{pmatrix} \vdots \\ \vdots \end{pmatrix}$ encode?
+
+\[
+(Av)_i = \sum_{j} a_{ij} v_j
+\]
+
+Then $A^n v$ is the outcome of a random ``surfer'' walk after $n$ (time) steps.
+It converges to the eigenvector corresponding to the dominant ($\lambda = 1$) EV of $A$. This is the stationary distribution.
+
+(That it exists is a consequence of Perron-Frobenius).
+
+\textbf{Questions:} How to compute eigenvalues/eigenvectors of (large) matrices?
+
+Develop a perturbation theory. \dots
+
+\newpage
+
+\section{Chapter: Basics}
+
+Let $A \in \mathbb{C}^{n \times n}$ be a matrix.
+
+\begin{itemize}
+    \item $\lambda$ is called an \textbf{eigenvalue} of $A$ if there is $v \in \mathbb{C}^n \setminus \{0\}$ such that $Av = \lambda v$.
+    \item $v$ is called a \textbf{right eigenvector} of $A$ to the eigenvalue $\lambda$.
+    \item $w \in \mathbb{C}^n \setminus \{0\}$ is called a \textbf{left eigenvector} to eigenvalue $\lambda$ if:
+    \[
+    w^* A = \lambda w^*
+    \]
+\end{itemize}
+
+where $w^* = (\bar{w}_1, \dots, \bar{w}_n)$ for $w = \begin{pmatrix} w_1 \\ \vdots \\ w_n \end{pmatrix}$.
+
+Recall complex conjugate: $z = x + iy \implies \bar{z} = x - iy$.
+
+\[
+w^* A = \lambda w^* \iff A^* w = \bar{\lambda} w
+\]
+(Where $A^* = (\bar{a}_{ji})$).
+
+The linear subspace $\ker(A - \lambda \text{id})$ is called the \textbf{eigenspace} of $\lambda$.
+
+$\dim \ker(A - \lambda \text{id})$ is called the \textbf{geometric multiplicity} of eigenvalue $\lambda$.
+
+
+Note: $\ker B = \{ v \in \mathbb{C}^n \mid Bv = 0 \}$.
+
+If $\lambda$ is an eigenvalue $\implies (A - \lambda \text{id})$ is singular $\implies \det(A - \lambda \text{id}) = 0$.
+
+This determinant is a polynomial in $\lambda$:
+\[
+p(\lambda) = \det(\lambda \text{id} - A) = \lambda^n + a_{n-1} \lambda^{n-1} + \dots + a_0
+\]
+Eigenvalues are roots (zeros) of $p$.
+$p$ is called the \textbf{characteristic polynomial} of $A$.
+
+By the fundamental theorem of algebra:
+\[
+p(z) = (z - \lambda_1)^{\alpha_1} \cdots (z - \lambda_m)^{\alpha_m}
+\]
+Here $\alpha_j$ is called the \textbf{algebraic multiplicity} of eigenvalue $\lambda_j$.
+
+\newpage
+
+\section{Jordan Normal Form}
+
+\textbf{Theorem:} For every matrix $A \in \mathbb{C}^{n \times n}$ there is a regular (invertible) matrix $X$ such that:
+\[
+A = X J X^{-1}
+\]
+where
+\[
+J = \begin{pmatrix}
+J_{m_1}(\lambda_1) & & 0 \\
+& \ddots & \\
+0 & & J_{m_k}(\lambda_k)
+\end{pmatrix}
+\]
+$J$ is a block matrix with entries:
+\[
+J_{m_\ell}(\lambda_\ell) = 
+\begin{pmatrix}
+\lambda_\ell & 1 & & 0 \\
+& \lambda_\ell & \ddots & \\
+& & \ddots & 1 \\
+0 & & & \lambda_\ell
+\end{pmatrix} \in \mathbb{C}^{m_\ell \times m_\ell}
+\]
+and $\sum_{\ell=1}^k m_\ell = n$.
+
+Special case $m_\ell = 1 \implies J_{m_\ell}(\lambda_\ell) = [\lambda_\ell]$.
+
+\textbf{Wikipedia Example:}
+\[
+A = \begin{pmatrix}
+5 & 4 & 2 & 1 \\
+0 & 1 & -1 & -1 \\
+-1 & -1 & 3 & 0 \\
+1 & 1 & -1 & 2
+\end{pmatrix}, \quad 
+J = \begin{pmatrix}
+1 & 0 & 0 & 0 \\
+0 & 2 & 0 & 0 \\
+0 & 0 & 4 & 1 \\
+0 & 0 & 0 & 4
+\end{pmatrix}
+\]
+
+\section{Basic Facts}
+
+Every linear map $T: V \to V$, ($V$ complex vector space, $n = \dim V$) has an eigenvalue (if $T \ne 0$).
+
+\textbf{Idea:}
+Consider $(v, Tv, T^2v, \dots, T^n v)$ for fixed $v \in V$.
+
+Later we will call this a \textbf{Krylow space}:
+\[
+\mathcal{K}_{n+1}(T, v) = \text{span}\{ v, Tv, \dots, T^n v \}
+\]
+
+Here we observe that $(v, Tv, \dots, T^n v)$ is a linearly dependent set.
+Example: In 2-dim space, 3 vectors have to be lin. dep.
+\[
+\alpha_1 \begin{pmatrix} 1 \\ 0 \end{pmatrix} + \alpha_2 \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 0 \\ 0 \end{pmatrix} \implies \alpha_1 = \alpha_2 = 0
+\]
+($n+1$ vectors in $n$-dim space).
+
+$\implies \exists \alpha_j$ s.t. $(\alpha_0, \dots, \alpha_n) \ne (0, \dots, 0)$ and:
+\[
+\sum_{j=0}^n \alpha_j T^j v = 0
+\]
+
+Let $p(z) = \sum_{j=0}^n \alpha_j z^j$.
+Then $p(T) = (\sum_{j=0}^n \alpha_j T^j)$.
+Hence there is a polynomial $p$ s.t. $p(T)v = 0$.
+
+Now we use the \textbf{Fundamental Theorem of Algebra} to factor:
+\[
+p(z) = \sum_{j=0}^n \alpha_j z^j = c \prod_{j=1}^n (z - \lambda_j)
+\]
+($\lambda_j$ might repeat).
+
+Now we rewrite:
+\[
+0 = p(T)v = c(T - \lambda_1 \text{id}) \dots (T - \lambda_n \text{id}) v
+\]
+$\implies$ at least one factor $(T - \lambda_k \text{id}) \tilde{v} = 0$.
+$\implies \lambda_k$ is an eigenvalue.
+
+\subsection*{Generalized Eigenvectors}
+A vector $v \in V$ is called a \textbf{generalized eigenvector} of $T$ to the eigenvalue $\lambda$ if:
+\[
+(T - \lambda \text{id})^j v = 0
+\]
+for some $j \ge 1$.
+``Normal eigenvectors'' appear for $j=1$.
+
+The \textbf{generalized eigenspace} is $\ker((T - \lambda \text{id})^n)$.
+
+A non-trivial observation (fact):
+Let $T: V \to V$ linear with eigenvalues $\lambda_1, \dots, \lambda_m$ (distinct).
+Let $U_k = \ker(T - \lambda_k \text{id})^n$ be the generalized eigenspaces. Then:
+\[
+V = U_1 \oplus \dots \oplus U_m
+\]
+(Direct sum means $V \cap W = \{0\}$ and $Z = V \oplus W = \{ z = v+w \mid v \in V, w \in W \}$).
+
+Now consider $(T - \lambda_j \text{id})$. We see that there has to be a power $m_j$ such that $(T - \lambda_j \text{id})^{m_j} |_{U_j} \equiv 0$.
+
+An operator $A: V \to V$ is called \textbf{nilpotent} if there is a $m \in \mathbb{N}$ s.t. $A^m \equiv 0$.
+
+\textbf{Fact:} If $N: V \to V$ is nilpotent then there are vectors $v_1, \dots, v_k \in V$ s.t.
+\[
+(v_1, Nv_1, \dots, N^{m(v_1)}v_1, \dots, v_k, Nv_k, \dots, N^{m(v_k)}v_k)
+\]
+is a basis for $V$.
+And $\sum_{j=1}^k (m(v_j)+1) = n$.
+Moreover, $(N^{m(v_1)}v_1, \dots, N^{m(v_k)}v_k)$ is a basis for $\ker N$.
+
+Now we have $V = U_1 \oplus \dots \oplus U_m$ and $(T - \lambda_j \text{id})|_{U_j}$ is nilpotent.
+$\implies$ there is a basis for $U_j$ of the form (**).
+Summing these bases together yields a basis for $V$.
+
+In that basis, $T$ has the form:
+\[
+T = \begin{pmatrix}
+J_{m_1}(\lambda_1) & & \\
+& \ddots & \\
+& & J_{m_k}(\lambda_k)
+\end{pmatrix}
+\]
+
+\textbf{Warning:}
+$A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ vs $\tilde{A} = \begin{pmatrix} 1+\epsilon & 1 \\ 0 & 1 \end{pmatrix}$.
+
+\end{document}
